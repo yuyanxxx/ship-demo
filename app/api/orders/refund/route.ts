@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createRefundTransaction as createDualRefund } from '@/lib/transaction-utils'
 import { getPriceRatio, calculateBasePrice } from '@/lib/pricing-engine'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user from header
-    const userId = request.headers.get('x-user-id')
-    const userDataHeader = request.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userId) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
+
+    const user = authResult.user!
+    const userId = user.id
 
     const body = await request.json()
     const { orderId, reason = 'Order rejected by carrier' } = body

@@ -143,8 +143,6 @@ export default function BalancePage() {
       // Fetch transactions from API with proper auth
       const response = await fetch('/api/balance/transactions', {
         headers: {
-          'Authorization': `Bearer ${user.id}`,
-          'x-user-id': user.id,
           'Authorization': `Bearer ${user.id}`
         }
       })

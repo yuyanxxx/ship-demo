@@ -168,8 +168,6 @@ function OrderDetailsContent() {
       // First fetch order details
       const response = await fetch(`/api/orders/${orderId}`, {
         headers: {
-          'Authorization': `Bearer ${user.id}`,
-          'x-user-id': user.id,
           'Authorization': `Bearer ${user.id}`
         }
       })
@@ -196,8 +194,6 @@ function OrderDetailsContent() {
         setSyncingStatus(true)
         fetch(`/api/orders/${orderId}/sync`, {
           headers: {
-            'Authorization': `Bearer ${user.id}`,
-            'x-user-id': user.id,
             'Authorization': `Bearer ${user.id}`
           }
         }).then(async (syncResponse) => {
