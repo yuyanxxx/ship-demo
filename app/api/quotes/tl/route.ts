@@ -2,14 +2,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { submitTLQuote } from '@/lib/rapiddeals-tl-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Get user context from headers (set by middleware)
-    const userDataHeader = request.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
+    }
+
+    const user = authResult.user!
+    const userData = user
     
     console.log('\n=== TL QUOTE API ROUTE ===')
     console.log('User Type:', user?.user_type);

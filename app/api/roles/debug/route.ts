@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from middleware header
-    const userDataHeader = request.headers.get('x-user-data')
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
-    
-    // Parse user data
-    let userData = null
-    try {
-      userData = JSON.parse(userDataHeader)
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
-    }
+
+    const user = authResult.user!
 
     // Only allow admin users
     if (user.user_type !== 'admin') {

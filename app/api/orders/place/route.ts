@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder } from '@/lib/rapiddeals-order-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,30 +33,21 @@ export async function POST(request: NextRequest) {
       throw new Error('Missing required contact information (name, email, or phone)')
     }
     
-    // Get user data from headers (set by middleware)
-    const userDataHeader = request.headers.get('x-user-data')
-    let userData
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(request)
     
-    if (userDataHeader) {
-      // User data from middleware
-      userData = JSON.parse(userDataHeader)
-      console.log('User from middleware:', user.email, 'Type:', user.user_type, 'Price Ratio:', user.price_ratio)
-    } else {
-      // Fallback: get user from email
-      const userEmail = body.contactInfo.email
-      const { data: dbUser, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('id, full_name, email, user_type, price_ratio')
-        .eq('email', userEmail)
-        .single()
-      
-      if (userError || !dbUser) {
-        console.error('Error fetching user:', userError)
-        throw new Error('User not found')
-      }
-      userData = dbUser
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
+
+    const user = authResult.user!
+    const userData = user
     
+    console.log('User from auth:', user.email, 'Type:', user.user_type, 'Price Ratio:', user.price_ratio)
+
     // Place the order with RapidDeals API
     const result = await placeOrder({
       orderId: body.orderId,

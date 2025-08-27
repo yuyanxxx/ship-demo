@@ -1,40 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateBasePrice, getPriceRatio } from '@/lib/pricing-utils'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user data from middleware
-    const userDataHeader = request.headers.get('x-user-data')
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    // Parse user data from headers
-    let userData = null
-    let userId = null
-    
-    try {
-      userData = JSON.parse(userDataHeader)
-      userId = user?.id
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      return NextResponse.json(
-        { success: false, error: 'Invalid user data' },
-        { status: 400 }
-      )
-    }
-    
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID not found' },
-        { status: 401 }
-      )
-    }
+    const user = authResult.user!
+    const userId = user.id
     
     console.log('Fetching orders for user:', userId, 'User type:', user?.user_type)
 

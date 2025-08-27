@@ -2,14 +2,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { submitLTLQuote, formatDateForAPI } from '@/lib/rapiddeals-ltl-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     
-    // Get user context from headers (set by middleware)
-    const userDataHeader = req.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(req)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
+    }
+
+    const user = authResult.user!
     
     // Server-side debug logging
     console.log('\n=== SERVER: LTL Quote API Request Received ===');

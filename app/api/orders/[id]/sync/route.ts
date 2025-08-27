@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createRefundTransaction } from '@/lib/transaction-utils'
 import { pricingEngine } from '@/lib/pricing-engine'
@@ -41,28 +42,18 @@ export async function GET(
       )
     }
 
-    // Get user from middleware header
-    const userDataHeader = request.headers.get('x-user-data')
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
-    
-    // Parse user data
-    let userId = null
-    try {
-      const userData = JSON.parse(userDataHeader)
-      userId = user.id
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      return NextResponse.json(
-        { success: false, error: 'Invalid user data' },
-        { status: 400 }
-      )
-    }
+
+    const user = authResult.user!
+    const userId = user.id
 
     console.log('Syncing order info from RapidDeals for:', orderId)
 

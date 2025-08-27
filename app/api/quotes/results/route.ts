@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchQuoteResults, pollQuoteResults } from '@/lib/rapiddeals-quote-results-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,9 +15,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get user context from headers (set by middleware)
-    const userDataHeader = req.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
+    // Use new authentication system
+    const authResult = await authorizeApiRequest(req)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
+    }
+
+    const user = authResult.user!
+    const userData = user
 
     console.log('\n=== SERVER: Quote Results API Request ===')
     console.log('Quote Order ID:', quoteOrderId)

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateBasePrice } from '@/lib/pricing-utils'
 
@@ -17,25 +18,18 @@ export async function GET(
       )
     }
 
-    // Get user from header
-    const userId = request.headers.get('x-user-id')
-    const userDataHeader = request.headers.get('x-user-data')
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userId) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    let userData = null
-    if (userDataHeader) {
-      try {
-        userData = JSON.parse(userDataHeader)
-      } catch (error) {
-        console.error('Error parsing user data:', error)
-      }
-    }
+    const user = authResult.user!
+    const userId = user.id
 
     console.log('Fetching order details for:', orderId, 'User:', userId, 'User type:', user?.user_type)
 
