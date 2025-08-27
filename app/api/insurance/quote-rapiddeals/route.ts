@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authorizeApiRequest } from '@/lib/auth-utils'
-import { createClient } from "@supabase/supabase-js"
 import { calculateCustomerPrice, getPriceRatio } from "@/lib/pricing-utils"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 const RAPIDDEALS_API_URL = process.env.RAPIDDEALS_API_URL || "https://ship.rapiddeals.com/api/shipment"
 const RAPIDDEALS_API_ID = process.env.RAPIDDEALS_API_ID
@@ -13,17 +8,17 @@ const RAPIDDEALS_API_KEY = process.env.RAPIDDEALS_API_KEY
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user data from middleware
-    const userDataHeader = request.headers.get("x-user-data")
-    if (!userDataHeader) {
-      console.error("No x-user-data header found")
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: "User not authenticated" },
-        { status: 401 }
+        { success: false, error: authResult.error || "User not authenticated" },
+        { status: authResult.status || 401 }
       )
     }
-    
-    const userData = JSON.parse(userDataHeader)
+
+    const user = authResult.user!
     const userId = user.id
     
     if (!userId) {
@@ -36,7 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Get price ratio for this user
-    const priceRatio = getPriceRatio(userData)
+    const priceRatio = getPriceRatio(user)
     
     console.log("=== RAPIDDEALS INSURANCE QUOTE API ===")
     console.log("User ID:", userId)

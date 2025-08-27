@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeApiRequest } from '@/lib/auth-utils'
 import { fetchQuoteResults, pollQuoteResults } from '@/lib/rapiddeals-quote-results-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
 

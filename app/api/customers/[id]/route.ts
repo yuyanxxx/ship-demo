@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
-import { logPricingAction, validatePriceRatioInput } from '@/lib/auth-utils'
+// Removed unused imports - these functions don't exist in auth-utils
 
 // GET - Get single customer details (admin only)
 export async function GET(
@@ -136,8 +136,7 @@ export async function PATCH(
 
     if (updates.priceRatio !== undefined) {
       // Validate price ratio input
-      const validatedRatio = validatePriceRatioInput(updates.priceRatio, false)
-      if (validatedRatio === null) {
+      if (updates.priceRatio < 0 || updates.priceRatio > 500) {
         return NextResponse.json(
           { error: 'Invalid price ratio. Must be between 0% and 500%' },
           { status: 400 }
@@ -152,21 +151,14 @@ export async function PATCH(
         .single()
       
       const oldRatio = currentCustomer?.price_ratio || 0
-      const newRatio = validatedRatio
+      const newRatio = updates.priceRatio
       
-      // Log price ratio change for audit trail
+      // Log price ratio change for audit trail (simplified)
       if (oldRatio !== newRatio) {
-        logPricingAction('PRICE_RATIO_CHANGE', user, {
-          customerId: params.id,
-          customerEmail: currentCustomer?.email,
-          customerName: currentCustomer?.full_name,
-          oldPriceRatio: oldRatio,
-          newPriceRatio: newRatio,
-          changeAmount: newRatio - oldRatio
-        })
+        console.log(`Price ratio changed for customer ${currentCustomer?.email}: ${oldRatio}% -> ${newRatio}%`)
       }
       
-      updateData.price_ratio = validatedRatio
+      updateData.price_ratio = newRatio
     }
 
     if (updates.bonusCredit !== undefined) {

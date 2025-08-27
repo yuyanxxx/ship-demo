@@ -4,22 +4,18 @@ import { supabaseAdmin } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    // Get user from middleware header
-    const userDataHeader = request.headers.get('x-user-data')
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    // Parse user data
-    let userData = null
-    try {
-      userData = JSON.parse(userDataHeader)
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
+    const user = authResult.user!
+    
     // CRITICAL: Only allow admin users
     if (user.user_type !== 'admin') {
       console.error(`Unauthorized reset attempt by user: ${user.email} (${user.user_type})`)

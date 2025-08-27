@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeApiRequest } from '@/lib/auth-utils';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { authorizeApiRequest } from '@/lib/auth-utils'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    const userDataHeader = request.headers.get('x-user-data');
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader);
+    const user = authResult.user!
+    
+    // Check if user is admin
     if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
@@ -52,12 +54,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userDataHeader = request.headers.get('x-user-data');
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader);
+    const user = authResult.user!
+    
+    // Check if user is admin
     if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }

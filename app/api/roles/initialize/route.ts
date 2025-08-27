@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const DEFAULT_PERMISSIONS = {

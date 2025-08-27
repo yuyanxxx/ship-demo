@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeApiRequest } from '@/lib/auth-utils'
 import { placeOrder } from '@/lib/rapiddeals-order-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'

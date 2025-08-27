@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeApiRequest } from '@/lib/auth-utils'
 import { submitTLQuote } from '@/lib/rapiddeals-tl-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
 
