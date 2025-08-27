@@ -1,28 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('[API /api/roles] GET request received')
-    console.log('[API /api/roles] Headers:', Object.fromEntries(request.headers.entries()))
     
-    const userDataHeader = request.headers.get('x-user-data')
-    console.log('[API /api/roles] x-user-data header:', userDataHeader)
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
-      console.log('[API /api/roles] No x-user-data header, returning 401')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader)
-    console.log('[API /api/roles] Parsed user data:', userData)
-    
-    if (userData.user_type !== 'admin') {
-      console.log('[API /api/roles] User is not admin, returning 403')
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
-    
-    console.log('[API /api/roles] User is admin, fetching roles')
+    const user = authResult.user!
+    console.log('[API /api/roles] User authorized:', user.email)
 
     const { data: roles, error } = await supabaseAdmin
       .from('roles')
@@ -60,15 +55,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userDataHeader = request.headers.get('x-user-data')
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader)
-    if (userData.user_type !== 'admin') {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
+    const user = authResult.user!
 
     const body = await request.json()
     const { name, description, permissions } = body

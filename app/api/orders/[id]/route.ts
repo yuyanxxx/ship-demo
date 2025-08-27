@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateBasePrice } from '@/lib/pricing-utils'
 
@@ -37,7 +38,7 @@ export async function GET(
       }
     }
 
-    console.log('Fetching order details for:', orderId, 'User:', userId, 'User type:', userData?.user_type)
+    console.log('Fetching order details for:', orderId, 'User:', userId, 'User type:', user?.user_type)
 
     // Build order query based on user type
     let orderQuery = supabaseAdmin
@@ -45,7 +46,7 @@ export async function GET(
       .select('*')
       .eq('id', orderId)
 
-    if (userData?.user_type === 'admin') {
+    if (user?.user_type === 'admin') {
       // Admin can view orders from customers in their customer list
       // First get the order without user restriction
       const { data: order, error: orderError } = await orderQuery.single()

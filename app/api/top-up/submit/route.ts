@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'customer') {
+    if (user.user_type !== 'customer') {
       return NextResponse.json({ error: 'Only customers can submit top-up requests' }, { status: 403 });
     }
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('top_up_requests')
       .insert({
-        customer_id: userData.id,
+        customer_id: user.id,
         payment_config_id,
         amount: parseFloat(amount),
         currency,
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
         payment_config:payment_configs(*),
         users!customer_id(email, full_name)
       `)
-      .eq('customer_id', userData.id)
+      .eq('customer_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {

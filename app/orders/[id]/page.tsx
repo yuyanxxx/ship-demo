@@ -170,7 +170,7 @@ function OrderDetailsContent() {
         headers: {
           'Authorization': `Bearer ${user.id}`,
           'x-user-id': user.id,
-          'x-user-data': JSON.stringify(user)
+          'Authorization': `Bearer ${user.id}`
         }
       })
 
@@ -198,7 +198,7 @@ function OrderDetailsContent() {
           headers: {
             'Authorization': `Bearer ${user.id}`,
             'x-user-id': user.id,
-            'x-user-data': JSON.stringify(user)
+            'Authorization': `Bearer ${user.id}`
           }
         }).then(async (syncResponse) => {
           if (syncResponse.ok) {

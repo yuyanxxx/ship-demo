@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createRefundTransaction } from '@/lib/transaction-utils'
 import { pricingEngine } from '@/lib/pricing-engine'
@@ -55,7 +56,7 @@ export async function GET(
     let userId = null
     try {
       const userData = JSON.parse(userDataHeader)
-      userId = userData.id
+      userId = user.id
     } catch (error) {
       console.error('Error parsing user data:', error)
       return NextResponse.json(

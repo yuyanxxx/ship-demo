@@ -1,12 +1,11 @@
 /**
- * NEXT.JS MIDDLEWARE - SINGLE POINT OF AUTHORIZATION
+ * NEXT.JS MIDDLEWARE - EDGE RUNTIME COMPATIBLE
  * 
- * This middleware enforces authorization for ALL routes.
- * No more auth checks in components or API routes.
+ * This middleware provides basic request validation without database access.
+ * Full authentication is handled in individual API routes.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authorizeRequest, createAuthenticatedResponse } from '@/lib/auth-middleware';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -18,25 +17,50 @@ export async function middleware(request: NextRequest) {
   
   console.log(`[Middleware] Processing: ${pathname}`);
   
-  // Run centralized authorization
-  const authResult = await authorizeRequest(request);
+  // Public routes that don't need any validation
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/auth/register', 
+    '/api/auth/forgot-password'
+  ];
   
-  if (!authResult.authorized) {
-    console.log(`[Middleware] Authorization failed: ${authResult.error}`);
-    return authResult.response || NextResponse.json(
-      { error: authResult.error || 'Unauthorized' },
+  if (publicRoutes.includes(pathname)) {
+    console.log(`[Middleware] Public route, allowing access: ${pathname}`);
+    return NextResponse.next();
+  }
+  
+  // For all other API routes, check if authorization header exists
+  const authHeader = request.headers.get('authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log(`[Middleware] Missing authorization header for: ${pathname}`);
+    return NextResponse.json(
+      { error: 'Unauthorized - Missing authorization header' },
       { status: 401 }
     );
   }
   
-  // If authorized and we have user data, inject it into headers
-  if (authResult.user) {
-    console.log(`[Middleware] User authorized: ${authResult.user.email}`);
-    return createAuthenticatedResponse(request, authResult.user);
+  const userId = authHeader.replace('Bearer ', '').trim();
+  
+  if (!userId) {
+    console.log(`[Middleware] Empty user ID for: ${pathname}`);
+    return NextResponse.json(
+      { error: 'Unauthorized - Invalid user ID' },
+      { status: 401 }
+    );
   }
   
-  // Public route or no user data needed
-  return NextResponse.next();
+  // Add user ID to headers for API routes to use
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id', userId);
+  
+  console.log(`[Middleware] User authorized: ${userId} for ${pathname}`);
+  
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

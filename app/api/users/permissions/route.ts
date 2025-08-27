@@ -1,28 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from middleware header
-    const userDataHeader = request.headers.get('x-user-data')
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    // Parse user data
-    let userData = null
-    try {
-      userData = JSON.parse(userDataHeader)
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userId = userData.id
+    const user = authResult.user!
+    const userId = user.id
 
-    console.log(`Fetching permissions for user: ${userData.email} (${userData.user_type})`)
+    console.log(`Fetching permissions for user: ${user.email} (${user.user_type})`)
 
     // Get user's roles
     const { data: userRoles, error: rolesError } = await supabaseAdmin
@@ -74,12 +70,12 @@ export async function GET(request: NextRequest) {
     
     const roleNames = userRoles.map(ur => (ur.roles as any)?.name).filter(Boolean)
 
-    console.log(`Final permissions for ${userData.email}:`, permissions)
+    console.log(`Final permissions for ${user.email}:`, permissions)
 
     return NextResponse.json({
       permissions,
       roles: roleNames,
-      user_type: userData.user_type
+      user_type: user.user_type
     })
 
   } catch (error) {

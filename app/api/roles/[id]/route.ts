@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(
@@ -6,13 +7,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userDataHeader = request.headers.get('x-user-data')
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader)
-    if (userData.user_type !== 'admin') {
+    const user = authResult.user!
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -44,13 +49,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userDataHeader = request.headers.get('x-user-data')
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader)
-    if (userData.user_type !== 'admin') {
+    const user = authResult.user!
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -123,13 +132,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userDataHeader = request.headers.get('x-user-data')
-    if (!userDataHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
+      )
     }
 
-    const userData = JSON.parse(userDataHeader)
-    if (userData.user_type !== 'admin') {
+    const user = authResult.user!
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

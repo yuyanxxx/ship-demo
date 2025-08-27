@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
@@ -20,12 +21,12 @@ export async function POST(request: NextRequest) {
     }
 
     // CRITICAL: Only allow admin users
-    if (userData.user_type !== 'admin') {
-      console.error(`Unauthorized reset attempt by user: ${userData.email} (${userData.user_type})`)
+    if (user.user_type !== 'admin') {
+      console.error(`Unauthorized reset attempt by user: ${user.email} (${user.user_type})`)
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
     }
 
-    console.log(`System reset initiated by admin: ${userData.email}`)
+    console.log(`System reset initiated by admin: ${user.email}`)
 
     // Start transaction-like operations
     const resetOperations = []
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       success: true, 
       message: 'System reset completed successfully',
       operations: resetOperations,
-      resetBy: userData.email,
+      resetBy: user.email,
       resetAt: new Date().toISOString()
     })
 

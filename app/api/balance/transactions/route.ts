@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createDualTransaction } from '@/lib/transaction-utils'
 import { getPriceRatio, getSupervisorUserId } from '@/lib/pricing-utils'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from middleware header
-    const userDataHeader = request.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
-    const userId = userData?.id
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userId || !userData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
+
+    const user = authResult.user!
+    const userId = user.id
 
     // Get query parameters for filtering
     const searchParams = request.nextUrl.searchParams
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       `)
     
     // Filter transactions based on user type
-    if (userData?.user_type === 'admin') {
+    if (user?.user_type === 'admin') {
       // Admins can see:
       // 1. Their own transactions (user_id = admin_id)
       // 2. All supervisor transactions (is_supervisor_transaction = true) 
@@ -167,16 +169,18 @@ export async function GET(request: NextRequest) {
 // POST endpoint to create a new transaction (for payments, adjustments, etc.)
 export async function POST(request: NextRequest) {
   try {
-    const userDataHeader = request.headers.get('x-user-data')
-    const userData = userDataHeader ? JSON.parse(userDataHeader) : null
-    const userId = userData?.id
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
     
-    if (!userId || !userData) {
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
+
+    const user = authResult.user!
+    const userId = user.id
 
     const body = await request.json()
     const {
@@ -199,7 +203,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only admins can create dual transactions
-    if (create_dual_transaction && userData?.user_type !== 'admin') {
+    if (create_dual_transaction && user?.user_type !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions for dual transaction creation' },
         { status: 403 }

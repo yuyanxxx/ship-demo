@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { createClient } from "@supabase/supabase-js"
 import { calculateCustomerPrice, getPriceRatio } from "@/lib/pricing-utils"
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
     
     const userData = JSON.parse(userDataHeader)
-    const userId = userData.id
+    const userId = user.id
     
     if (!userId) {
       return NextResponse.json(
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     
     console.log("=== RAPIDDEALS INSURANCE QUOTE API ===")
     console.log("User ID:", userId)
-    console.log("User Type:", userData.user_type)
+    console.log("User Type:", user.user_type)
     console.log("Price Ratio:", priceRatio)
     console.log("Request Body:", JSON.stringify(body, null, 2))
     console.log("Environment Variables Check:")
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
 
       // Apply pricing based on user type
       const baseInsuranceAmount = parseFloat(data.data.insuranceAmount)
-      const customerInsuranceAmount = userData.user_type === 'admin' 
+      const customerInsuranceAmount = user.user_type === 'admin' 
         ? baseInsuranceAmount 
         : calculateCustomerPrice(baseInsuranceAmount, priceRatio)
       
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
         const baseInsuranceAmount = Math.max(20, declaredValueNum * insuranceRate) // Minimum $20
         
         // Apply pricing for mock data too
-        const customerInsuranceAmount = userData.user_type === 'admin' 
+        const customerInsuranceAmount = user.user_type === 'admin' 
           ? baseInsuranceAmount 
           : calculateCustomerPrice(baseInsuranceAmount, priceRatio)
         

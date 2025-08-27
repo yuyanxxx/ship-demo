@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { placeOrder } from '@/lib/rapiddeals-order-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (userDataHeader) {
       // User data from middleware
       userData = JSON.parse(userDataHeader)
-      console.log('User from middleware:', userData.email, 'Type:', userData.user_type, 'Price Ratio:', userData.price_ratio)
+      console.log('User from middleware:', user.email, 'Type:', user.user_type, 'Price Ratio:', user.price_ratio)
     } else {
       // Fallback: get user from email
       const userEmail = body.contactInfo.email
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
       estimated_delivery_date: deliveryDate.toISOString().split('T')[0],
       
       // Origin information
-      origin_location_name: quoteData.originAddress?.address_name || userData.full_name,
+      origin_location_name: quoteData.originAddress?.address_name || user.full_name,
       origin_contact_name: body.contactInfo.originName || body.contactInfo.name,
       origin_contact_phone: body.contactInfo.originPhone || body.contactInfo.phone,
       origin_contact_email: body.contactInfo.originEmail || body.contactInfo.email,
@@ -214,9 +215,9 @@ export async function POST(request: NextRequest) {
       }],
       
       // User information
-      user_id: userData.id,
-      user_email: userData.email,
-      company_name: userData.full_name
+      user_id: user.id,
+      user_email: user.email,
+      company_name: user.full_name
     }
     
     // Insert order into database
@@ -339,9 +340,9 @@ export async function POST(request: NextRequest) {
         
         // Calculate base amount using centralized pricing engine
         const userPricing: UserPricingData = {
-          id: userData.id,
-          user_type: userData.user_type,
-          price_ratio: userData.price_ratio || 0
+          id: user.id,
+          user_type: user.user_type,
+          price_ratio: user.price_ratio || 0
         }
         const baseAmount = pricingEngine.calculateBasePrice(customerAmount, userPricing.price_ratio)
         
@@ -365,11 +366,11 @@ export async function POST(request: NextRequest) {
           // Prepare data for the OLD function signature (two jsonb parameters)
           const customerData = {
             transaction_id: customerTxId,
-            user_id: userData.id,
-            user_email: userData.email,
+            user_id: user.id,
+            user_email: user.email,
             order_id: savedOrder.id,
-            order_account: `ACC-${userData.id.substring(0, 8).toUpperCase()}`,
-            company_name: userData.full_name || 'Customer',
+            order_account: `ACC-${user.id.substring(0, 8).toUpperCase()}`,
+            company_name: user.full_name || 'Customer',
             order_number: body.orderId,
             amount: -Math.abs(customerAmount), // Negative for debit
             base_amount: baseAmount,
@@ -390,10 +391,10 @@ export async function POST(request: NextRequest) {
           const supervisorData = {
             transaction_id: supervisorTxId,
             user_id: supervisor.id,
-            user_email: userData.email,  // Store customer's email for display
+            user_email: user.email,  // Store customer's email for display
             order_id: savedOrder.id,
-            order_account: `ACC-${userData.id.substring(0, 8).toUpperCase()}`,  // Customer's account
-            company_name: userData.full_name || 'Customer',  // Customer's company
+            order_account: `ACC-${user.id.substring(0, 8).toUpperCase()}`,  // Customer's account
+            company_name: user.full_name || 'Customer',  // Customer's company
             order_number: body.orderId,
             amount: -Math.abs(baseAmount), // Negative for debit
             base_amount: baseAmount,
@@ -404,8 +405,8 @@ export async function POST(request: NextRequest) {
             metadata: {
               actual_user_id: supervisor.id,  // Store supervisor ID in metadata
               actual_user_email: supervisor.email,
-              customer_user_id: userData.id,
-              customer_company: userData.full_name || 'Customer',
+              customer_user_id: user.id,
+              customer_company: user.full_name || 'Customer',
               service_type: quoteData.serviceType || 'LTL',
               carrier_name: selectedQuote.carrierName || body.carrierSCAC,
               origin_city: quoteData.originAddress?.city,

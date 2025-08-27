@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
     // Get user from auth middleware
-    const userDataHeader = request.headers.get('x-user-data')
-    if (!userDataHeader) {
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
-    
-    const userData = JSON.parse(userDataHeader)
-    const userId = userData.id
+
+    const user = authResult.user!
+    const userId = user.id
 
     // Get user's addresses
     const { data: addresses, error } = await supabaseAdmin

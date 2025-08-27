@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function PUT(
@@ -22,7 +23,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
     }
 
-    const userId = userData.id
+    const userId = user.id
 
     const { 
       address_name,
@@ -64,7 +65,7 @@ export async function PUT(
       .eq('id', addressId)
 
     // If not admin, restrict to user's own addresses
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       addressQuery = addressQuery.eq('user_id', userId)
     }
 
@@ -146,7 +147,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
     }
 
-    const userId = userData.id
+    const userId = user.id
     const { id: addressId } = await params
 
     // Check if address exists and belongs to the user (or admin can access any address)
@@ -156,7 +157,7 @@ export async function DELETE(
       .eq('id', addressId)
 
     // If not admin, restrict to user's own addresses
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       addressQuery = addressQuery.eq('user_id', userId)
     }
 

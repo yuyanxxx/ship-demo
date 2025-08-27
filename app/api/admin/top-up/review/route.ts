@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
       const { data, error } = await supabaseAdmin.rpc('approve_top_up_request', {
         request_id,
-        approver_id: userData.id,
+        approver_id: user.id,
         approved_amount: parseFloat(amount),
         notes
       });
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
       const { data, error } = await supabaseAdmin.rpc('reject_top_up_request', {
         request_id,
-        rejector_id: userData.id,
+        rejector_id: user.id,
         notes
       });
 

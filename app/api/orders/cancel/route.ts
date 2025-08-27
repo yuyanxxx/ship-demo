@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from "@/lib/supabase"
 import { createRefundTransaction as createDualRefund } from '@/lib/transaction-utils'
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     let userData = null
     try {
       userData = JSON.parse(userDataHeader)
-      userId = userData.id
+      userId = user.id
     } catch (error) {
       console.error('Error parsing user data:', error)
       return NextResponse.json({ error: 'Invalid user data' }, { status: 400 })
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         .select('email')
         .eq('id', userId)
         .single()
-      userEmail = userData?.email || ''
+      userEmail = user?.email || ''
     }
 
     if (orderError || !order) {

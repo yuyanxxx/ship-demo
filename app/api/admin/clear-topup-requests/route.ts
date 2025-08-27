@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function DELETE(request: NextRequest) {
@@ -10,11 +11,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    console.log('[Admin] Clearing all top-up requests for admin:', userData.email);
+    console.log('[Admin] Clearing all top-up requests for admin:', user.email);
 
     // First, get a count of records to be deleted
     const { count: beforeCount } = await supabaseAdmin

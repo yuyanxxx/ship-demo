@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { submitTLQuote } from '@/lib/rapiddeals-tl-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
 
@@ -12,8 +13,8 @@ export async function POST(request: NextRequest) {
     const userData = userDataHeader ? JSON.parse(userDataHeader) : null
     
     console.log('\n=== TL QUOTE API ROUTE ===')
-    console.log('User Type:', userData?.user_type);
-    console.log('Price Ratio:', userData?.price_ratio);
+    console.log('User Type:', user?.user_type);
+    console.log('Price Ratio:', user?.price_ratio);
     console.log('Received request body:', JSON.stringify(body, null, 2))
     
     // Submit TL quote to RapidDeals API
@@ -26,9 +27,9 @@ export async function POST(request: NextRequest) {
       let processedRates = result.initialRates || [];
       if (userData && processedRates.length > 0) {
         const userPricing: UserPricingData = {
-          id: userData.id || '',
-          user_type: userData.user_type || 'customer',
-          price_ratio: userData.price_ratio || 0
+          id: user.id || '',
+          user_type: user.user_type || 'customer',
+          price_ratio: user.price_ratio || 0
         };
         console.log('Applying pricing to TL rates:', userPricing.price_ratio);
         

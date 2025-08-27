@@ -135,9 +135,7 @@ export default function OrdersPage() {
       // Fetch real orders from database with proper auth
       const response = await fetch('/api/orders/list', {
         headers: {
-          'Authorization': `Bearer ${user.id}`,
-          'x-user-id': user.id,
-          'x-user-data': JSON.stringify(user)
+          'Authorization': `Bearer ${user.id}`
         }
       })
 

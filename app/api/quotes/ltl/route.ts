@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { submitLTLQuote, formatDateForAPI } from '@/lib/rapiddeals-ltl-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
 
@@ -14,8 +15,8 @@ export async function POST(req: NextRequest) {
     // Server-side debug logging
     console.log('\n=== SERVER: LTL Quote API Request Received ===');
     console.log('Timestamp:', new Date().toISOString());
-    console.log('User Type:', userData?.user_type);
-    console.log('Price Ratio:', userData?.price_ratio);
+    console.log('User Type:', user?.user_type);
+    console.log('Price Ratio:', user?.price_ratio);
     console.log('Request Body:', JSON.stringify(body, null, 2));
     
     // Validate required fields

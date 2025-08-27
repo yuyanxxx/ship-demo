@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('payment_configs')
       .select('*')
-      .eq('admin_id', userData.id)
+      .eq('admin_id', user.id)
       .order('country', { ascending: true });
 
     if (country) {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('payment_configs')
       .insert({
-        admin_id: userData.id,
+        admin_id: user.id,
         country,
         payment_method,
         account_name,
@@ -118,7 +119,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -133,7 +134,7 @@ export async function PUT(request: NextRequest) {
       .from('payment_configs')
       .update(updateData)
       .eq('id', id)
-      .eq('admin_id', userData.id)
+      .eq('admin_id', user.id)
       .select()
       .single();
 
@@ -161,7 +162,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const userData = JSON.parse(userDataHeader);
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -176,7 +177,7 @@ export async function DELETE(request: NextRequest) {
       .from('payment_configs')
       .delete()
       .eq('id', id)
-      .eq('admin_id', userData.id);
+      .eq('admin_id', user.id);
 
     if (error) {
       console.error('Error deleting payment config:', error);

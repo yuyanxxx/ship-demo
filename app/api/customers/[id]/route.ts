@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import { logPricingAction, validatePriceRatioInput } from '@/lib/auth-utils'
@@ -11,15 +12,16 @@ export async function GET(
   try {
     const params = await context.params
     // Get user from session
-    const userHeader = request.headers.get('x-user-data')
-    if (!userHeader) {
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    const user = JSON.parse(userHeader)
+    const user = authResult.user!
     
     // Check if user is admin
     if (user.user_type !== 'admin') {
@@ -62,15 +64,16 @@ export async function PATCH(
   try {
     const params = await context.params
     // Get user from session
-    const userHeader = request.headers.get('x-user-data')
-    if (!userHeader) {
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    const user = JSON.parse(userHeader)
+    const user = authResult.user!
     
     // Check if user is admin
     if (user.user_type !== 'admin') {
@@ -282,15 +285,16 @@ export async function DELETE(
   try {
     const params = await context.params
     // Get user from session
-    const userHeader = request.headers.get('x-user-data')
-    if (!userHeader) {
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    const user = JSON.parse(userHeader)
+    const user = authResult.user!
     
     // Check if user is admin
     if (user.user_type !== 'admin') {

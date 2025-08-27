@@ -1,265 +1,416 @@
 /**
- * Authorization utilities for supervisor-customer pricing system
- * Handles role-based access control and pricing authorization
+ * AUTH UTILITIES FOR API ROUTES
+ * 
+ * This file provides authentication utilities that can be used in API routes.
+ * It's designed to work with the simplified middleware.
  */
 
+import { NextRequest } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase';
+import { UserPricingData } from '@/lib/pricing-engine';
+
 /**
- * Check if user has admin privileges
- * 
- * @param userData - User object from middleware
- * @returns True if user is an admin
+ * Enhanced user data with all necessary fields
  */
-export function isAdmin(userData: Record<string, unknown> | null): boolean {
-  return userData?.user_type === 'admin';
+export interface AuthenticatedUser extends UserPricingData {
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  created_at?: string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 /**
- * Check if user has supervisor privileges (admin)
- * Alias for isAdmin for clarity in pricing context
- * 
- * @param userData - User object from middleware  
- * @returns True if user is a supervisor (admin)
+ * Route authorization configuration
  */
-export function isSupervisor(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
+export interface RouteConfig {
+  requireAuth: boolean;
+  allowedRoles?: ('admin' | 'customer')[];
+  requireActiveUser?: boolean;
+  checkPermissions?: string[];
 }
 
 /**
- * Check if user is a customer
- * 
- * @param userData - User object from middleware
- * @returns True if user is a customer
+ * Route configurations - THE source of truth for authorization
  */
-export function isCustomer(userData: Record<string, unknown> | null): boolean {
-  return userData?.user_type === 'customer';
-}
-
-/**
- * Check if user can view base pricing
- * Only admins/supervisors can see base pricing
- * 
- * @param userData - User object from middleware
- * @returns True if user can view base pricing
- */
-export function canViewBasePricing(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
-}
-
-/**
- * Check if user can modify price ratios
- * Only admins can modify customer price ratios
- * 
- * @param userData - User object from middleware
- * @returns True if user can modify price ratios
- */
-export function canModifyPriceRatios(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
-}
-
-/**
- * Check if user can create dual transactions
- * Only admins can create dual transactions
- * 
- * @param userData - User object from middleware
- * @returns True if user can create dual transactions
- */
-export function canCreateDualTransactions(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
-}
-
-/**
- * Check if user can view all transactions
- * Admins can view all transactions, customers only their own
- * 
- * @param userData - User object from middleware
- * @returns True if user can view all transactions
- */
-export function canViewAllTransactions(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
-}
-
-/**
- * Check if user can manage customers
- * Only admins can create, edit, delete customers
- * 
- * @param userData - User object from middleware
- * @returns True if user can manage customers
- */
-export function canManageCustomers(userData: Record<string, unknown> | null): boolean {
-  return isAdmin(userData);
-}
-
-/**
- * Authorize request based on required permission
- * Returns authorization result with error message if unauthorized
- * 
- * @param userData - User object from middleware
- * @param permission - Required permission
- * @returns Authorization result
- */
-export function authorizeRequest(
-  userData: Record<string, unknown> | null, 
-  permission: 'admin' | 'customer' | 'viewBasePricing' | 'modifyPriceRatios' | 'createDualTransactions' | 'viewAllTransactions' | 'manageCustomers'
-): { authorized: boolean; error?: string } {
-  if (!userData) {
-    return { authorized: false, error: 'User not authenticated' };
+export const ROUTE_CONFIGS: Record<string, RouteConfig> = {
+  // Public routes - no auth required
+  '/api/auth/login': { requireAuth: false },
+  '/api/auth/register': { requireAuth: false },
+  '/api/auth/forgot-password': { requireAuth: false },
+  
+  // Admin-only routes
+  '/api/customers': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/customers/[id]': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/roles': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/roles/assign-admin-roles': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/roles/debug': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/roles/initialize': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/admin/migrate': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  
+  // Customer and Admin routes
+  '/api/quotes/ltl': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/quotes/tl': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/quotes/results': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/orders/place': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/orders/[id]': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/balance/transactions': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/users/permissions': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  
+  // Top-up related routes
+  '/api/top-up/countries': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/top-up/payment-configs': { 
+    requireAuth: true, 
+    allowedRoles: ['admin', 'customer'],
+    requireActiveUser: true 
+  },
+  '/api/top-up/submit': { 
+    requireAuth: true, 
+    allowedRoles: ['customer'],
+    requireActiveUser: true 
+  },
+  
+  // Admin top-up routes
+  '/api/admin/payment-config': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/admin/top-up/review': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/admin/clear-topup-requests': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  '/api/admin/reset-system': { 
+    requireAuth: true, 
+    allowedRoles: ['admin'],
+    requireActiveUser: true 
+  },
+  
+  // Default for unspecified routes
+  '/api/*': { 
+    requireAuth: true,
+    requireActiveUser: true 
   }
+};
 
-  if (!userData.is_active) {
-    return { authorized: false, error: 'User account is inactive' };
+/**
+ * Get route configuration for a path
+ */
+export function getRouteConfig(pathname: string): RouteConfig {
+  // Try exact match first
+  if (ROUTE_CONFIGS[pathname]) {
+    return ROUTE_CONFIGS[pathname];
   }
-
-  switch (permission) {
-    case 'admin':
-      return isAdmin(userData) 
-        ? { authorized: true }
-        : { authorized: false, error: 'Admin privileges required' };
-        
-    case 'customer':
-      return isCustomer(userData) 
-        ? { authorized: true }
-        : { authorized: false, error: 'Customer account required' };
-        
-    case 'viewBasePricing':
-      return canViewBasePricing(userData)
-        ? { authorized: true }
-        : { authorized: false, error: 'Insufficient privileges to view base pricing' };
-        
-    case 'modifyPriceRatios':
-      return canModifyPriceRatios(userData)
-        ? { authorized: true }
-        : { authorized: false, error: 'Insufficient privileges to modify price ratios' };
-        
-    case 'createDualTransactions':
-      return canCreateDualTransactions(userData)
-        ? { authorized: true }
-        : { authorized: false, error: 'Insufficient privileges to create dual transactions' };
-        
-    case 'viewAllTransactions':
-      return canViewAllTransactions(userData)
-        ? { authorized: true }
-        : { authorized: false, error: 'Insufficient privileges to view all transactions' };
-        
-    case 'manageCustomers':
-      return canManageCustomers(userData)
-        ? { authorized: true }
-        : { authorized: false, error: 'Insufficient privileges to manage customers' };
-        
-    default:
-      return { authorized: false, error: 'Unknown permission requested' };
+  
+  // Try pattern match (for dynamic routes)
+  for (const [pattern, config] of Object.entries(ROUTE_CONFIGS)) {
+    if (pattern.includes('[') && pattern.includes(']')) {
+      // Convert pattern to regex (e.g., /api/customers/[id] -> /api/customers/.+)
+      const regex = new RegExp('^' + pattern.replace(/\[.*?\]/g, '[^/]+') + '$');
+      if (regex.test(pathname)) {
+        return config;
+      }
+    }
   }
+  
+  // Check for wildcard patterns
+  const pathSegments = pathname.split('/');
+  for (let i = pathSegments.length; i > 0; i--) {
+    const wildcardPath = pathSegments.slice(0, i).join('/') + '/*';
+    if (ROUTE_CONFIGS[wildcardPath]) {
+      return ROUTE_CONFIGS[wildcardPath];
+    }
+  }
+  
+  // Default: require auth
+  return { requireAuth: true, requireActiveUser: true };
 }
 
 /**
- * Middleware helper to extract and validate user data from request headers
- * 
- * @param request - Next.js request object
- * @returns User data object or null if not found
+ * Extract user ID from request headers (set by middleware)
  */
-export function extractUserData(request: Request): Record<string, unknown> | null {
+export function getUserIdFromRequest(request: NextRequest): string | null {
+  return request.headers.get('x-user-id');
+}
+
+/**
+ * Main authorization function for API routes
+ */
+export async function authorizeApiRequest(request: NextRequest): Promise<{
+  authorized: boolean;
+  user?: AuthenticatedUser;
+  error?: string;
+  status?: number;
+}> {
+  const pathname = request.nextUrl.pathname;
+  const config = getRouteConfig(pathname);
+  
+  console.log(`[Auth] Processing ${pathname}`, config);
+  
+  // Public routes - no auth needed
+  if (!config.requireAuth) {
+    console.log('[Auth] Public route, allowing access');
+    return { authorized: true };
+  }
+  
+  // Get user ID from headers (set by middleware)
+  const userId = getUserIdFromRequest(request);
+  
+  if (!userId) {
+    console.log('[Auth] No user ID in headers');
+    return {
+      authorized: false,
+      error: 'Unauthorized - No user ID found',
+      status: 401
+    };
+  }
+  
+  // Fetch user from database
+  console.log('[Auth] Fetching user:', userId);
+  
+  let user = null;
+  let error = null;
+  
   try {
-    const userDataHeader = request.headers.get('x-user-data');
-    if (!userDataHeader) {
-      return null;
+    const response = await supabaseAdmin
+      .from('users')
+      .select(`
+        id,
+        email,
+        full_name,
+        user_type,
+        price_ratio,
+        is_active,
+        created_at
+      `)
+      .eq('id', userId)
+      .single();
+    
+    user = response.data;
+    error = response.error;
+    
+    console.log('[Auth] Supabase response:', { user: !!user, error: error?.message });
+  } catch (fetchError) {
+    console.log('[Auth] Supabase fetch error:', {
+      message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+      details: String(fetchError)
+    });
+    error = fetchError;
+  }
+  
+  if (error || !user) {
+    console.log('[Auth] User not found:', {
+      message: error instanceof Error ? error.message : String(error)
+    });
+    
+    return {
+      authorized: false,
+      error: 'Unauthorized - User not found',
+      status: 401
+    };
+  }
+  
+  // Check if user is active
+  if (config.requireActiveUser && !user.is_active) {
+    console.log('[Auth] User is inactive');
+    return {
+      authorized: false,
+      error: 'Forbidden - Account is inactive',
+      status: 403
+    };
+  }
+  
+  // Check role-based access
+  if (config.allowedRoles && config.allowedRoles.length > 0) {
+    if (!config.allowedRoles.includes(user.user_type as 'admin' | 'customer')) {
+      console.log('[Auth] User role not allowed:', user.user_type);
+      return {
+        authorized: false,
+        error: `Forbidden - Required role: ${config.allowedRoles.join(' or ')}`,
+        status: 403
+      };
     }
-    
-    const userData = JSON.parse(userDataHeader);
-    
-    // Validate required fields
-    if (!userData.id || !userData.user_type) {
-      console.warn('Invalid user data in request headers:', userData);
-      return null;
+  }
+  
+  // Fetch user roles and permissions if needed
+  let roles: string[] = [];
+  let permissions: string[] = [];
+  
+  if (config.checkPermissions) {
+    try {
+      const { data: userRoles } = await supabaseAdmin
+        .from('user_roles')
+        .select('role_id')
+        .eq('user_id', userId);
+      
+      if (userRoles && userRoles.length > 0) {
+        const roleIds = userRoles.map(ur => ur.role_id);
+        
+        const { data: roleData } = await supabaseAdmin
+          .from('roles')
+          .select('name')
+          .in('id', roleIds);
+        
+        if (roleData) {
+          roles = roleData.map(r => r.name);
+        }
+        
+        const { data: permData } = await supabaseAdmin
+          .from('role_permissions')
+          .select('permission_key')
+          .in('role_id', roleIds);
+        
+        if (permData) {
+          permissions = [...new Set(permData.map(p => p.permission_key))];
+        }
+      }
+      
+      // Check specific permissions
+      const hasRequiredPermissions = config.checkPermissions.every(
+        perm => permissions.includes(perm)
+      );
+      
+      if (!hasRequiredPermissions) {
+        console.log('[Auth] Missing required permissions');
+        return {
+          authorized: false,
+          error: 'Forbidden - Missing required permissions',
+          status: 403
+        };
+      }
+    } catch (permError) {
+      console.log('[Auth] Error fetching permissions:', permError);
+      return {
+        authorized: false,
+        error: 'Internal server error',
+        status: 500
+      };
     }
-    
-    return userData;
-  } catch (error) {
-    console.error('Error parsing user data from headers:', error);
-    return null;
-  }
-}
-
-/**
- * Create standardized authorization error response
- * 
- * @param error - Error message
- * @param status - HTTP status code (default: 403)
- * @returns NextResponse with error
- */
-export function createAuthErrorResponse(error: string, status: number = 403) {
-  return Response.json(
-    { success: false, error },
-    { status }
-  );
-}
-
-/**
- * Validate and sanitize price ratio input
- * Ensures price ratio is within acceptable bounds
- * 
- * @param priceRatio - Raw price ratio input
- * @param allowNegative - Whether negative ratios are allowed (default: false)
- * @returns Validated price ratio or null if invalid
- */
-export function validatePriceRatioInput(priceRatio: string | number | null | undefined, allowNegative: boolean = false): number | null {
-  if (priceRatio === null || priceRatio === undefined) {
-    return null;
-  }
-  const ratio = parseFloat(String(priceRatio));
-  
-  if (isNaN(ratio)) {
-    return null;
   }
   
-  // Set reasonable bounds
-  const minRatio = allowNegative ? -50 : 0;
-  const maxRatio = 500; // 500% markup maximum
+  // Build authenticated user object
+  const authenticatedUser: AuthenticatedUser = {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    user_type: user.user_type as 'admin' | 'customer',
+    price_ratio: user.price_ratio || 0,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    roles,
+    permissions
+  };
   
-  if (ratio < minRatio || ratio > maxRatio) {
-    return null;
-  }
-  
-  return ratio;
-}
-
-/**
- * Log pricing-related actions for audit trail
- * 
- * @param action - Action performed
- * @param userData - User performing the action
- * @param details - Additional details
- */
-export function logPricingAction(action: string, userData: Record<string, unknown> | null, details: Record<string, unknown> = {}) {
-  console.log(`[PRICING AUDIT] ${action}`, {
-    timestamp: new Date().toISOString(),
-    userId: userData?.id,
-    userType: userData?.user_type,
-    userEmail: userData?.email,
-    action,
-    details
+  console.log('[Auth] User authorized:', {
+    id: authenticatedUser.id,
+    email: authenticatedUser.email,
+    type: authenticatedUser.user_type,
+    priceRatio: authenticatedUser.price_ratio
   });
+  
+  return {
+    authorized: true,
+    user: authenticatedUser
+  };
 }
 
 /**
- * Mask sensitive pricing information from logs
- * 
- * @param data - Data object to mask
- * @returns Masked data object
+ * Helper to check if user has permission
  */
-export function maskSensitivePricingData(data: Record<string, unknown>): Record<string, unknown> {
-  if (!data || typeof data !== 'object') {
-    return data;
-  }
-  
-  const masked = { ...data };
-  
-  // Mask sensitive fields
-  const sensitiveFields = ['base_amount', 'basePrice', 'supervisorAmount', 'markup_amount'];
-  
-  sensitiveFields.forEach(field => {
-    if (masked[field] !== undefined) {
-      masked[field] = '[MASKED]';
-    }
-  });
-  
-  return masked;
+export function userHasPermission(
+  user: AuthenticatedUser,
+  permission: string
+): boolean {
+  return user.permissions?.includes(permission) || false;
+}
+
+/**
+ * Helper to check if user has role
+ */
+export function userHasRole(
+  user: AuthenticatedUser,
+  role: string
+): boolean {
+  return user.roles?.includes(role) || false;
+}
+
+/**
+ * Helper to check if user is admin
+ */
+export function isAdmin(user: AuthenticatedUser): boolean {
+  return user.user_type === 'admin';
+}
+
+/**
+ * Helper to check if user is customer
+ */
+export function isCustomer(user: AuthenticatedUser): boolean {
+  return user.user_type === 'customer';
 }

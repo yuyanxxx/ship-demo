@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { fetchQuoteResults, pollQuoteResults } from '@/lib/rapiddeals-quote-results-api'
 import { pricingEngine, type UserPricingData } from '@/lib/pricing-engine'
 
@@ -21,8 +22,8 @@ export async function POST(req: NextRequest) {
     console.log('\n=== SERVER: Quote Results API Request ===')
     console.log('Quote Order ID:', quoteOrderId)
     console.log('Polling Mode:', poll)
-    console.log('User Type:', userData?.user_type)
-    console.log('Price Ratio:', userData?.price_ratio)
+    console.log('User Type:', user?.user_type)
+    console.log('Price Ratio:', user?.price_ratio)
     
     if (poll) {
       // Use polling mode to fetch results multiple times
@@ -32,9 +33,9 @@ export async function POST(req: NextRequest) {
       let processedRates = rates
       if (userData && rates.length > 0) {
         const userPricing: UserPricingData = {
-          id: userData.id || '',
-          user_type: userData.user_type || 'customer',
-          price_ratio: userData.price_ratio || 0
+          id: user.id || '',
+          user_type: user.user_type || 'customer',
+          price_ratio: user.price_ratio || 0
         }
         console.log('Applying pricing to rates:', userPricing.price_ratio)
         processedRates = pricingEngine.processBatchQuotes(rates as unknown as Record<string, unknown>[], userPricing) as unknown as typeof rates
@@ -54,9 +55,9 @@ export async function POST(req: NextRequest) {
       // Apply price ratio to rates if user data is available
       if (userData && result.success && result.data?.rates) {
         const userPricing: UserPricingData = {
-          id: userData.id || '',
-          user_type: userData.user_type || 'customer',
-          price_ratio: userData.price_ratio || 0
+          id: user.id || '',
+          user_type: user.user_type || 'customer',
+          price_ratio: user.price_ratio || 0
         }
         console.log('Applying pricing to rates:', userPricing.price_ratio)
         result.data.rates = pricingEngine.processBatchQuotes(result.data.rates as unknown as Record<string, unknown>[], userPricing) as unknown as typeof result.data.rates

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
@@ -20,11 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Only allow admin users to run this operation
-    if (userData.user_type !== 'admin') {
+    if (user.user_type !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
     }
 
-    console.log(`Auto-assigning Super Admin roles initiated by: ${userData.email}`)
+    console.log(`Auto-assigning Super Admin roles initiated by: ${user.email}`)
 
     // Get the Super Admin role
     const { data: superAdminRole, error: roleError } = await supabaseAdmin
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             role_id: superAdminRole.id,
             assigned_at: new Date().toISOString(),
-            assigned_by: userData.id
+            assigned_by: user.id
           })
 
         if (assignError) {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       },
       details: results,
       super_admin_role: superAdminRole,
-      processed_by: userData.email,
+      processed_by: user.email,
       processed_at: new Date().toISOString()
     })
 

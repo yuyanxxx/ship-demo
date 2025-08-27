@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculateBasePrice, getPriceRatio } from '@/lib/pricing-utils'
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     
     try {
       userData = JSON.parse(userDataHeader)
-      userId = userData?.id
+      userId = user?.id
     } catch (error) {
       console.error('Error parsing user data:', error)
       return NextResponse.json(
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    console.log('Fetching orders for user:', userId, 'User type:', userData?.user_type)
+    console.log('Fetching orders for user:', userId, 'User type:', user?.user_type)
 
     // Build query based on user type
     let ordersQuery = supabaseAdmin
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       `)
     
     // Filter orders based on user type
-    if (userData?.user_type === 'admin') {
+    if (user?.user_type === 'admin') {
       // Admins can see all orders
       ordersQuery = ordersQuery.order('created_at', { ascending: false })
     } else {
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('API - Database query results:', {
-      userType: userData?.user_type,
+      userType: user?.user_type,
       userId: userId,
       orderCount: orders?.length || 0,
       orders: orders?.map(o => ({ 
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
       let displayAmount = originalAmount;
       let baseAmount = originalAmount;
       
-      if (userData?.user_type === 'admin') {
+      if (user?.user_type === 'admin') {
         // Admin should see base prices (no markup)
         // Get the actual customer's price_ratio from the database
         const { data: customerData, error: customerError } = await supabaseAdmin

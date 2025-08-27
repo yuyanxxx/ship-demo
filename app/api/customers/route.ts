@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
+import { authorizeApiRequest } from '@/lib/auth-utils'
 
-// GET - List all customers (accessible to all authenticated users)
+// GET - List all customers (admin only)
 export async function GET(request: NextRequest) {
   try {
-    // Get user from session
-    const userHeader = request.headers.get('x-user-data')
-    if (!userHeader) {
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
-
-    // Parse user but no need to check type for GET requests
-    // All authenticated users can view customers
-    JSON.parse(userHeader)
 
     // Get optional filters from query params
     const searchParams = request.nextUrl.searchParams
@@ -83,24 +81,17 @@ export async function GET(request: NextRequest) {
 // POST - Create new customer (admin only)
 export async function POST(request: NextRequest) {
   try {
-    // Get user from session
-    const userHeader = request.headers.get('x-user-data')
-    if (!userHeader) {
+    // Authorize the request
+    const authResult = await authorizeApiRequest(request)
+    
+    if (!authResult.authorized) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: authResult.error || 'Unauthorized' },
+        { status: authResult.status || 401 }
       )
     }
 
-    const user = JSON.parse(userHeader)
-    
-    // Check if user is admin
-    if (user.user_type !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
-        { status: 403 }
-      )
-    }
+    const user = authResult.user!
 
     const { 
       email, 
